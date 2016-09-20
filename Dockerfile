@@ -37,12 +37,27 @@ RUN unzip /tmp/geoserver.zip -d /opt/ && \
 ENV GEOSERVER_HOME /opt/geoserver
 ENV GEOSERVER_DATA_DIR /opt/geoserver/data_dir
 
+WORKDIR $GEOSERVER_HOME
+
 RUN mv $GEOSERVER_HOME/webapps/geoserver/WEB-INF/lib/jai_*.jar /tmp/
 
 # Download mysql extension into /WEB-INF/lib
 RUN wget http://sourceforge.net/projects/geoserver/files/GeoServer/$GEOSERVER_VERSION/extensions/geoserver-$GEOSERVER_VERSION-mysql-plugin.zip && \
  unzip  -d $GEOSERVER_HOME/webapps/geoserver/WEB-INF/lib/ geoserver-$GEOSERVER_VERSION-mysql-plugin.zip && \
  rm geoserver-$GEOSERVER_VERSION-mysql-plugin.zip
+
+WORKDIR $GEOSERVER_HOME/webapps/geoserver/WEB-INF
+ADD enable-cors.sh $GEOSERVER_HOME/webapps/geoserver/WEB-INF
+
+# set jetty servlets lib to enable CorsFilter
+RUN wget http://central.maven.org/maven2/org/eclipse/jetty/jetty-servlets/9.2.13.v20150730/jetty-servlets-9.2.13.v20150730.jar -P $GEOSERVER_HOME/webapps/geoserver/WEB-INF/lib/ && \
+  chmod 777 -R $GEOSERVER_HOME/webapps/geoserver/WEB-INF/lib/
+# add cors filter in web.xml
+RUN chmod +x enable-cors.sh && \
+  ./enable-cors.sh
+RUN rm enable-cors.sh
+
+WORKDIR $GEOSERVER_HOME
 
 CMD $GEOSERVER_HOME/bin/startup.sh
 EXPOSE 8080
